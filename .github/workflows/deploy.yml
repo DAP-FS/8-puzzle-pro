@@ -1,0 +1,58 @@
+name: Deploy React App to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create React App structure
+        run: |
+          mkdir -p src public
+          echo '{"name":"8-puzzle-pro","private":true,"version":"0.0.0","type":"module","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"react":"^18.2.0","react-dom":"^18.2.0"},"devDependencies":{"@types/react":"^18.2.43","@types/react-dom":"^18.2.17","@vitejs/plugin-react":"^4.2.1","vite":"^5.0.8"}}' > package.json
+          echo 'import { defineConfig } from "vite"; import react from "@vitejs/plugin-react"; export default defineConfig({ plugins: [react()], base: "/8-puzzle-pro/" });' > vite.config.js
+          echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>8-Puzzle Pro</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>' > index.html
+          echo 'import React from "react"; import ReactDOM from "react-dom/client"; import App from "./App.jsx"; ReactDOM.createRoot(document.getElementById("root")).render(<React.StrictMode><App /></React.StrictMode>);' > src/main.jsx
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Copy App code
+        run: |
+          cat << 'PUZZLEEOF' > src/App.jsx
+          PASTE_THE_ENTIRE_PUZZLEPRO_CODE_HERE
+          PUZZLEEOF
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
